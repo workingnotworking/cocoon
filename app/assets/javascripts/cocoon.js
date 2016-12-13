@@ -37,6 +37,10 @@
 
   }
 
+  var isEventAborted = function(event) {
+    return event.hasOwnProperty('abort') && event.abort;
+  }
+
   $(document).on('click', '.add_fields', function(e) {
     e.preventDefault();
     var $this                 = $(this),
@@ -83,15 +87,18 @@
 
     $.each(new_contents, function(i, node) {
       var contentNode = $(node);
+      var beforeInsertEvent = insertionNodeElem.trigger('cocoon:before-insert', [contentNode]);
 
-      insertionNodeElem.trigger('cocoon:before-insert', [contentNode]);
-
-      // allow any of the jquery dom manipulation methods (after, before, append, prepend, etc)
-      // to be called on the node.  allows the insertion node to be the parent of the inserted
-      // code and doesn't force it to be a sibling like after/before does. default: 'before'
-      var addedContent = insertionNodeElem[insertionMethod](contentNode);
-
-      insertionNodeElem.trigger('cocoon:after-insert', [contentNode]);
+      // allow aborting insertion of new content by setting `e.abort = true` in the event
+      if (isEventAborted(beforeInsertEvent)) {
+        insertionNodeElem.trigger('cocoon:abort', [contentNode]);
+      } else {
+        // allow any of the jquery dom manipulation methods (after, before, append, prepend, etc)
+        // to be called on the node.  allows the insertion node to be the parent of the inserted
+        // code and doesn't force it to be a sibling like after/before does. default: 'before'
+        var addedContent = insertionNodeElem[insertionMethod](contentNode);
+        insertionNodeElem.trigger('cocoon:after-insert', [contentNode]);
+      }
     });
   });
 
